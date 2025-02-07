@@ -1,36 +1,166 @@
 package application;
 
+import databasePart1.DatabaseHelper;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 
-
-/**
- * AdminPage class represents the user interface for the admin user.
- * This page displays a simple welcome message for the admin.
- */
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class AdminHomePage {
-	/**
-     * Displays the admin page in the provided primary stage.
-     * @param primaryStage The primary stage where the scene will be displayed.
-     */
+    private final DatabaseHelper databaseHelper;
+    private final ObservableList<User> users = FXCollections.observableArrayList();
+    
+    public AdminHomePage(DatabaseHelper databaseHelper) {
+        this.databaseHelper = databaseHelper;
+    }
+    
     public void show(Stage primaryStage) {
-    	VBox layout = new VBox();
-    	
-	    layout.setStyle("-fx-alignment: center; -fx-padding: 20;");
-	    
-	    // label to display the welcome message for the admin
-	    Label adminLabel = new Label("Hello, Admin!");
-	    
-	    adminLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        TableView<User> tableView = new TableView<>();
+        
+        // Adding a column for displaying user names
+        TableColumn<User, String> userColumn = new TableColumn<>("User");
+        userColumn.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getUserName()));
+        userColumn.setPrefWidth(200);
+        
+        // Adding a column for displaying user roles
+        TableColumn<User, String> roleColumn = new TableColumn<>("Roles");
+        roleColumn.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getRole()));
+        roleColumn.setPrefWidth(250);
+        
+        // Adding a column with buttons to assign multiple roles
+        TableColumn<User, Void> actionColumn = new TableColumn<>("Assign Roles");
+        actionColumn.setPrefWidth(250);
+        actionColumn.setCellFactory(param -> new TableCell<User, Void>() {
+            private final List<String> roles = Arrays.asList("staff", "instructor", "admin", "user");
+            private final HBox buttonBox = new HBox(5);
 
-	    layout.getChildren().add(adminLabel);
-	    Scene adminScene = new Scene(layout, 800, 400);
+            {
+                for (String role : roles) {
+                    Button button = new Button(role);
+                    button.setStyle("-fx-background-color: lightblue;");
+                    button.setOnAction(event -> toggleRole(getTableView().getItems().get(getIndex()), role));
+                    buttonBox.getChildren().add(button);
+                }
+            }
 
-	    // Set the scene to primary stage
-	    primaryStage.setScene(adminScene);
-	    primaryStage.setTitle("Admin Page");
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(buttonBox);
+                }
+            }
+        });
+        
+        // Adding a delete button to remove a user
+        TableColumn<User, Void> deleteColumn = new TableColumn<>("Delete");
+        deleteColumn.setPrefWidth(100);
+        deleteColumn.setCellFactory(param -> new TableCell<User, Void>() {
+            private final Button deleteButton = new Button("Delete");
+            {
+                deleteButton.setStyle("-fx-background-color: lightcoral;");
+                deleteButton.setOnAction(event -> {
+                    User user = getTableView().getItems().get(getIndex());
+                    long adminCount = users.stream().filter(u -> u.getRole().contains("admin")).count();
+                    
+                    if (adminCount <= 1 && user.getRole().contains("admin")) {
+                        Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot delete the last admin.", ButtonType.OK);
+                        alert.showAndWait();
+                        return;
+                    }
+                    
+                    Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete this user?", ButtonType.YES, ButtonType.NO);
+                    confirmDialog.showAndWait().ifPresent(response -> {
+                        if (response == ButtonType.YES) {
+                            deleteUser(user);
+                        }
+                    });
+                });
+            }
+
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(deleteButton);
+                }
+            }
+        });
+
+        // Adding all columns to the table
+        tableView.getColumns().addAll(userColumn, roleColumn, actionColumn, deleteColumn);
+        tableView.setItems(users);
+        loadUsers();
+        
+        // Back button
+        Button backButton = new Button("Back");
+        backButton.setOnAction(event -> primaryStage.setScene(new Scene(new VBox(), 800, 400))); // Replace with actual back navigation
+        
+        VBox layout = new VBox(tableView, backButton);
+        layout.setSpacing(10);
+        layout.setStyle("-fx-alignment: center;");
+        
+        Scene scene = new Scene(layout, 800, 500);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Admin Page");
+    }
+    
+    // Method to load users from the database
+    private void loadUsers() {
+        users.clear();
+        try (ResultSet rs = databaseHelper.getAllUsers()) {
+            while (rs.next()) {
+                users.add(new User(rs.getString("userName"), "", rs.getString("role")));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    // Method to toggle user roles when clicking a button
+    private void toggleRole(User user, String role) {
+        List<String> roles = Arrays.asList(user.getRole().split(","));
+        roles = roles.stream().map(String::trim).filter(r -> !r.isEmpty()).collect(Collectors.toList());
+        
+        if (roles.contains(role)) {
+            roles.remove(role);
+        } else {
+            roles.add(role);
+        }
+        
+        if (roles.isEmpty()) {
+            databaseHelper.deleteUser(user.getUserName());
+            users.remove(user);
+            return;
+        }
+        
+        if (roles.contains("admin")) {
+            roles.remove("admin");
+            roles.add(0, "admin"); // Ensure at least one admin exists
+        }
+        
+        String newRole = String.join(",", roles);
+        databaseHelper.updateUserRole(user.getUserName(), newRole);
+        user.setRole(newRole);
+        users.set(users.indexOf(user), user);
+    }
+    
+    // Method to delete a user from the database
+    private void deleteUser(User user) {
+        databaseHelper.deleteUser(user.getUserName());
+        users.remove(user);
     }
 }
