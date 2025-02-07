@@ -33,8 +33,8 @@ public class DatabaseHelper {
 			System.out.println("Connecting to database...");
 			connection = DriverManager.getConnection(DB_URL, USER, PASS);
 			statement = connection.createStatement(); 
-			// You can use this command to clear the database and restart from fresh.
-			//statement.execute("DROP ALL OBJECTS");
+			//You can use this command to clear the database and restart from fresh.
+	//	statement.execute("DROP ALL OBJECTS");
 
 			createTables();  // Create the necessary tables if they don't exist
 		} catch (ClassNotFoundException e) {
@@ -183,4 +183,70 @@ public class DatabaseHelper {
 		} 
 	}
 
+
+	    // Add new method to check if there are any users (for first user detection)
+	    public boolean hasAnyUsers() throws SQLException {
+	        String query = "SELECT COUNT(*) FROM cse360users";
+	        try (ResultSet rs = statement.executeQuery(query)) {
+	            if (rs.next()) {
+	                return rs.getInt(1) > 0;
+	            }
+	        }
+	        return false;
+	    }
+
+
+	    // Modify register method to handle first user case
+	    public void register(User user, boolean isFirstUser) throws SQLException {
+	        // For first user, no invitation code needed and role must be admin
+	        if (isFirstUser) {
+	            if (!hasAnyUsers()) {
+	                if (!user.getRole().equals("admin")) {
+	                    throw new SQLException("First user must be an admin");
+	                }
+	            } else {
+	                throw new SQLException("Cannot register as first user - users already exist");
+	            }
+	        }
+	        
+	        String insertUser = "INSERT INTO cse360users (userName, password, role) VALUES (?, ?, ?)";
+	        try (PreparedStatement pstmt = connection.prepareStatement(insertUser)) {
+	            pstmt.setString(1, user.getUserName());
+	            pstmt.setString(2, user.getPassword());
+	            pstmt.setString(3, user.getRole().toLowerCase());
+	            pstmt.executeUpdate();
+	        }
+	    }
+
+
+	    // Add method to get all users with a specific role
+	    public ResultSet getUsersByRole(String role) throws SQLException {
+	        String query = "SELECT userName FROM cse360users WHERE role = ?";
+	        PreparedStatement pstmt = connection.prepareStatement(query);
+	        pstmt.setString(1, role);
+	        return pstmt.executeQuery();
+	    }
+
+	    // Add method to update user role
+	    public boolean updateUserRole(String userName, String newRole) throws SQLException {
+	        String query = "UPDATE cse360users SET role = ? WHERE userName = ?";
+	        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+	            pstmt.setString(1, newRole.toLowerCase());
+	            pstmt.setString(2, userName);
+	            return pstmt.executeUpdate() > 0;
+	        }
+	    }
+
+	    // Add method to get count of users by role
+	    public int getUserCountByRole(String role) throws SQLException {
+	        String query = "SELECT COUNT(*) FROM cse360users WHERE role = ?";
+	        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+	            pstmt.setString(1, role.toLowerCase());
+	            ResultSet rs = pstmt.executeQuery();
+	            if (rs.next()) {
+	                return rs.getInt(1);
+	            }
+	        }
+	        return 0;
+	    }
 }

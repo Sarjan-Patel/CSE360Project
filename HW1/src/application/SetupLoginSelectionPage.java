@@ -26,7 +26,7 @@ public class SetupLoginSelectionPage {
         Button loginButton = new Button("Login");
         
         setupButton.setOnAction(a -> {
-            new SetupAccountPage(databaseHelper).show(primaryStage);
+            new SetupAccountPage(databaseHelper, false).show(primaryStage);
         });
         loginButton.setOnAction(a -> {
         	new UserLoginPage(databaseHelper).show(primaryStage);
