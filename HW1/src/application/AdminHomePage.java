@@ -130,33 +130,47 @@ public class AdminHomePage {
         }
     }
     
-    // Method to toggle user roles when clicking a button
     private void toggleRole(User user, String role) {
         List<String> roles = Arrays.asList(user.getRole().split(","));
         roles = roles.stream().map(String::trim).filter(r -> !r.isEmpty()).collect(Collectors.toList());
-        
+
+        // Count number of admins before making changes
+        long adminCount = users.stream().filter(u -> u.getRole().contains("admin")).count();
+
+        // Prevent removing "admin" role if it's the last admin
+        if (role.equals("admin") && roles.contains("admin") && adminCount <= 1) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot remove the last admin!", ButtonType.OK);
+            alert.showAndWait();
+            return;
+        }
+
+        // Toggle role
         if (roles.contains(role)) {
             roles.remove(role);
         } else {
             roles.add(role);
         }
-        
+
+        // If no roles are left, delete the user
         if (roles.isEmpty()) {
             databaseHelper.deleteUser(user.getUserName());
             users.remove(user);
             return;
         }
-        
+
+        // Ensure "admin" role remains at the start if assigned
         if (roles.contains("admin")) {
             roles.remove("admin");
-            roles.add(0, "admin"); // Ensure at least one admin exists
+            roles.add(0, "admin"); // Keep admin role as the first in the list
         }
-        
+
+        // Update role in database and UI
         String newRole = String.join(",", roles);
         databaseHelper.updateUserRole(user.getUserName(), newRole);
         user.setRole(newRole);
         users.set(users.indexOf(user), user);
     }
+
     
     // Method to delete a user from the database
     private void deleteUser(User user) {
