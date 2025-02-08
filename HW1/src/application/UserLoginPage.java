@@ -22,7 +22,7 @@ public class UserLoginPage {
     }
 
     public void show(Stage primaryStage) {
-    	// Input field for the user's userName, password
+        // Input field for the user's userName, password
         TextField userNameField = new TextField();
         userNameField.setPromptText("Enter userName");
         userNameField.setMaxWidth(250);
@@ -30,44 +30,39 @@ public class UserLoginPage {
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Enter Password");
         passwordField.setMaxWidth(250);
-        
+
         // Label to display error messages
         Label errorLabel = new Label();
         errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 12px;");
 
-
         Button loginButton = new Button("Login");
-        
+
         loginButton.setOnAction(a -> {
-        	// Retrieve user inputs
             String userName = userNameField.getText();
             String password = passwordField.getText();
+
             try {
-            	User user=new User(userName, password, "");
-            	WelcomeLoginPage welcomeLoginPage = new WelcomeLoginPage(databaseHelper);
-            	
-            	// Retrieve the user's role from the database using userName
-            	String role = databaseHelper.getUserRole(userName);
-            	
-            	if(role!=null) {
-            		user.setRole(role);
-            		if(databaseHelper.login(user)) {
-            			welcomeLoginPage.show(primaryStage,user);
-            		}
-            		else {
-            			// Display an error if the login fails
-                        errorLabel.setText("Error logging in");
-            		}
-            	}
-            	else {
-            		// Display an error if the account does not exist
-                    errorLabel.setText("user account doesn't exists");
-            	}
-            	
+                if (databaseHelper.isOneTimePassword(userName, password)) {
+                    // OTP Login Detected - Redirect to reset password page
+                    
+                } else {
+                    // Normal Login Flow
+                    String role = databaseHelper.getUserRole(userName);
+                    if (role != null) {
+                        User user = new User(userName, password, role);
+                        if (databaseHelper.login(user)) {
+                            new WelcomeLoginPage(databaseHelper).show(primaryStage, user);
+                        } else {
+                            errorLabel.setText("Invalid credentials");
+                        }
+                    } else {
+                        errorLabel.setText("User account not found");
+                    }
+                }
             } catch (SQLException e) {
-                System.err.println("Database error: " + e.getMessage());
                 e.printStackTrace();
-            } 
+                errorLabel.setText("Database error.");
+            }
         });
 
         VBox layout = new VBox(10);
