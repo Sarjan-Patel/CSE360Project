@@ -155,10 +155,19 @@ Add or removing roles for users while ensuring that at least one admin always ex
 Screencast1
 
 Zoom Link: https://asu.zoom.us/rec/share/gbrx_slLyKK22s9JuavIp-S_udHPfyV5VQ61g-QN03gc6xSQJdlriKMd53VCntJi.mbxkj9kDcUMv5MLD?startTime=1738994563000
- Passcode: &h&n2c0M
+Passcode: &h&n2c0M
 
 
 Screencast2
 
-Zoom Link: https://asu.zoom.us/rec/share/B5R87pXVtDRKhFwK8sRceYS2G_BwXFqBc1gsZJc4xuELrYG_3unYol1pZ84W-v4v.Dy6G2SdhG1a85JMB?startTime=1738997567000 Passcode: =2rLC=V?
+Zoom Link: https://asu.zoom.us/rec/share/fCjuM3mi6Ljr4Af30IwIgArdVrfVKxZWp4ADgQnNjW9YuT0wigvk0B60vp5DRHA-.zEFQlf7HHavuzKWt
+Passcode:%J0.3mw7
 
+Standup meeting 1
+
+Zoom Link: https://asu.zoom.us/rec/share/B5R87pXVtDRKhFwK8sRceYS2G_BwXFqBc1gsZJc4xuELrYG_3unYol1pZ84W-v4v.Dy6G2SdhG1a85JMB?startTime=1738997567000
+Passcode: =2rLC=V?
+
+Standup meeting 2
+
+Drive Link: https://drive.google.com/file/d/1PdbSaQJ7UFivTZa_9-duow9jGfB2SD47/view?usp=drive_link
