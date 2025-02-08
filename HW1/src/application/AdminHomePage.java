@@ -1,180 +1,123 @@
 package application;
 
-import databasePart1.DatabaseHelper;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
-
+import javafx.geometry.Insets;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.control.cell.PropertyValueFactory;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+import databasePart1.DatabaseHelper;
 
 public class AdminHomePage {
     private final DatabaseHelper databaseHelper;
-    private final ObservableList<User> users = FXCollections.observableArrayList();
-    
+
     public AdminHomePage(DatabaseHelper databaseHelper) {
         this.databaseHelper = databaseHelper;
     }
-    
+
     public void show(Stage primaryStage) {
-        TableView<User> tableView = new TableView<>();
-        
-        // Adding a column for displaying user names
-        TableColumn<User, String> userColumn = new TableColumn<>("User");
-        userColumn.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getUserName()));
-        userColumn.setPrefWidth(200);
-        
-        // Adding a column for displaying user roles
-        TableColumn<User, String> roleColumn = new TableColumn<>("Roles");
-        roleColumn.setCellValueFactory(data -> new javafx.beans.property.SimpleStringProperty(data.getValue().getRole()));
-        roleColumn.setPrefWidth(250);
-        
-        // Adding a column with buttons to assign multiple roles
-        TableColumn<User, Void> actionColumn = new TableColumn<>("Assign Roles");
-        actionColumn.setPrefWidth(250);
-        actionColumn.setCellFactory(param -> new TableCell<User, Void>() {
-            private final List<String> roles = Arrays.asList("staff", "instructor", "admin", "user");
-            private final HBox buttonBox = new HBox(5);
+        VBox layout = new VBox(10);
+        layout.setStyle("-fx-alignment: center; -fx-padding: 20;");
 
-            {
-                for (String role : roles) {
-                    Button button = new Button(role);
-                    button.setStyle("-fx-background-color: lightblue;");
-                    button.setOnAction(event -> toggleRole(getTableView().getItems().get(getIndex()), role));
-                    buttonBox.getChildren().add(button);
-                }
-            }
+        // Welcome label
+        Label adminLabel = new Label("Hello, Admin!");
+        adminLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
 
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                } else {
-                    setGraphic(buttonBox);
-                }
-            }
-        });
-        
-        // Adding a delete button to remove a user
-        TableColumn<User, Void> deleteColumn = new TableColumn<>("Delete");
-        deleteColumn.setPrefWidth(100);
-        deleteColumn.setCellFactory(param -> new TableCell<User, Void>() {
+        // Create table
+        TableView<User> table = new TableView<>();
+        table.setMinWidth(600);
+
+        // Username column
+        TableColumn<User, String> usernameCol = new TableColumn<>("Username");
+        usernameCol.setCellValueFactory(new PropertyValueFactory<>("userName"));
+        usernameCol.setPrefWidth(200);
+
+        // Role column
+        TableColumn<User, String> roleCol = new TableColumn<>("Role");
+        roleCol.setCellValueFactory(new PropertyValueFactory<>("role"));
+        roleCol.setPrefWidth(200);
+
+        // Action column with buttons
+        TableColumn<User, Void> actionCol = new TableColumn<>("Action");
+        actionCol.setPrefWidth(200);
+        actionCol.setCellFactory(col -> new TableCell<>() {
             private final Button deleteButton = new Button("Delete");
+            private final Button otpButton = new Button("Set OTP");
+            private final HBox buttonBox = new HBox(5);
+            
             {
-                deleteButton.setStyle("-fx-background-color: lightcoral;");
+                deleteButton.setStyle("-fx-background-color: #ff4444; -fx-text-fill: white;");
+                otpButton.setStyle("-fx-background-color: #e0e0e0;");
+                buttonBox.getChildren().addAll(deleteButton, otpButton);
+                
                 deleteButton.setOnAction(event -> {
-                    User user = getTableView().getItems().get(getIndex());
-                    long adminCount = users.stream().filter(u -> u.getRole().contains("admin")).count();
-                    
-                    if (adminCount <= 1 && user.getRole().contains("admin")) {
-                        Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot delete the last admin.", ButtonType.OK);
-                        alert.showAndWait();
-                        return;
+                    User user = getTableRow().getItem();
+                    if (user != null) {
+                        System.out.println("Delete clicked for: " + user.getUserName());
+                        // Add delete functionality here
                     }
-                    
-                    Alert confirmDialog = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete this user?", ButtonType.YES, ButtonType.NO);
-                    confirmDialog.showAndWait().ifPresent(response -> {
-                        if (response == ButtonType.YES) {
-                            deleteUser(user);
-                        }
-                    });
                 });
-            }
+            
+            
+            otpButton.setOnAction(event -> {
+                User user = getTableRow().getItem();
+                if (user != null) {
+                    // Generate and set OTP
+                    String otp = generateOTP(); // You'll need to implement this
+                    try {
+                        databaseHelper.setOneTimePassword(user.getUserName(), otp);
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("OTP Set");
+                        alert.setHeaderText(null);
+                        alert.setContentText("OTP for " + user.getUserName() + ": " + otp);
+                        alert.showAndWait();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
 
+            private String generateOTP() {
+                // Generate a random 6-digit number
+                int randomPIN = (int)(Math.random()*900000)+100000;
+                return String.valueOf(randomPIN);
+            }
+            
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                } else {
-                    setGraphic(deleteButton);
-                }
+                setGraphic(empty ? null : buttonBox);  // Change from deleteButton to buttonBox
             }
         });
 
-        // Adding all columns to the table
-        tableView.getColumns().addAll(userColumn, roleColumn, actionColumn, deleteColumn);
-        tableView.setItems(users);
-        loadUsers();
-        
-        // Back button
-        Button backButton = new Button("Back");
-        backButton.setOnAction(event -> primaryStage.setScene(new Scene(new VBox(), 800, 400))); // Replace with actual back navigation
-        
-        VBox layout = new VBox(tableView, backButton);
-        layout.setSpacing(10);
-        layout.setStyle("-fx-alignment: center;");
-        
-        Scene scene = new Scene(layout, 800, 500);
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("Admin Page");
-    }
-    
-    // Method to load users from the database
-    private void loadUsers() {
-        users.clear();
-        try (ResultSet rs = databaseHelper.getAllUsers()) {
+        table.getColumns().addAll(usernameCol, roleCol, actionCol);
+
+        // Load data into table
+        try {
+            ResultSet rs = databaseHelper.getAllUsers();
             while (rs.next()) {
-                users.add(new User(rs.getString("userName"), "", rs.getString("role")));
+                table.getItems().add(new User(
+                    rs.getString("userName"),
+                    "",  // We don't show password
+                    rs.getString("role")
+                ));
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
-    
-    private void toggleRole(User user, String role) {
-        List<String> roles = Arrays.asList(user.getRole().split(","));
-        roles = roles.stream().map(String::trim).filter(r -> !r.isEmpty()).collect(Collectors.toList());
 
-        // Count number of admins before making changes
-        long adminCount = users.stream().filter(u -> u.getRole().contains("admin")).count();
+        // Back button
+        Button backButton = new Button("Back");
+        backButton.setStyle("-fx-background-color: #4285f4; -fx-text-fill: white;");
+        backButton.setOnAction(e -> new WelcomeLoginPage(databaseHelper).show(primaryStage, new User("admin", "", "admin")));
 
-        // Prevent removing "admin" role if it's the last admin
-        if (role.equals("admin") && roles.contains("admin") && adminCount <= 1) {
-            Alert alert = new Alert(Alert.AlertType.WARNING, "Cannot remove the last admin!", ButtonType.OK);
-            alert.showAndWait();
-            return;
-        }
-
-        // Toggle role
-        if (roles.contains(role)) {
-            roles.remove(role);
-        } else {
-            roles.add(role);
-        }
-
-        // If no roles are left, delete the user
-        if (roles.isEmpty()) {
-            databaseHelper.deleteUser(user.getUserName());
-            users.remove(user);
-            return;
-        }
-
-        // Ensure "admin" role remains at the start if assigned
-        if (roles.contains("admin")) {
-            roles.remove("admin");
-            roles.add(0, "admin"); // Keep admin role as the first in the list
-        }
-
-        // Update role in database and UI
-        String newRole = String.join(",", roles);
-        databaseHelper.updateUserRole(user.getUserName(), newRole);
-        user.setRole(newRole);
-        users.set(users.indexOf(user), user);
-    }
-
-    
-    // Method to delete a user from the database
-    private void deleteUser(User user) {
-        databaseHelper.deleteUser(user.getUserName());
-        users.remove(user);
+        layout.getChildren().addAll(adminLabel, table, backButton);
+        primaryStage.setScene(new Scene(layout, 800, 400));
+        primaryStage.setTitle("Admin Page");
     }
 }

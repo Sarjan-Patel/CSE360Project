@@ -30,16 +30,29 @@ public class AdminSetupPage {
         PasswordField passwordField = new PasswordField();
         passwordField.setPromptText("Enter Password");
         passwordField.setMaxWidth(250);
+        
+        //modified
+        TextField fullNameField = new TextField();
+        fullNameField.setPromptText("Enter Full Name");
+        fullNameField.setMaxWidth(250);
+
+        //modified
+        TextField emailField = new TextField();
+        emailField.setPromptText("Enter Email");
+        emailField.setMaxWidth(250);
 
         Button setupButton = new Button("Setup");
         
         setupButton.setOnAction(a -> {
         	// Retrieve user input
             String userName = userNameField.getText();
-            String password = passwordField.getText();
+            String password = passwordField.getText(); //modified
+            String fullName = fullNameField.getText(); //modified
+            String email = emailField.getText();
+            
             try {
             	// Create a new User object with admin role and register in the database
-            	User user=new User(userName, password, "admin");
+            	 User user = new User(userName, password, "admin");
                 databaseHelper.register(user);
                 System.out.println("Administrator setup completed.");
                 
@@ -51,7 +64,7 @@ public class AdminSetupPage {
             }
         });
 
-        VBox layout = new VBox(10, userNameField, passwordField, setupButton);
+        VBox layout = new VBox(10, userNameField, passwordField, fullNameField, emailField, setupButton); //modified
         layout.setStyle("-fx-padding: 20; -fx-alignment: center;");
 
         primaryStage.setScene(new Scene(layout, 800, 400));

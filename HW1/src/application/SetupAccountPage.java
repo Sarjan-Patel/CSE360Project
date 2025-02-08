@@ -35,9 +35,9 @@ public class SetupAccountPage {
         passwordField.setPromptText("Enter Password");
         passwordField.setMaxWidth(250);
         
-        TextField inviteCodeField = new TextField();
-        inviteCodeField.setPromptText("Enter InvitationCode");
-        inviteCodeField.setMaxWidth(250);
+        TextField invitationCodeField = new TextField();
+        invitationCodeField.setPromptText("Enter Invitation Code");
+        invitationCodeField.setMaxWidth(250);
         
         // Label to display error messages for invalid input or registration issues
         Label errorLabel = new Label();
@@ -50,7 +50,8 @@ public class SetupAccountPage {
         	// Retrieve user input
             String userName = userNameField.getText();
             String password = passwordField.getText();
-            String code = inviteCodeField.getText();
+            String invitationCode = invitationCodeField.getText();
+       
             
             String userNameError = UserNameRecognizer.checkForValidUserName(userName);
             if(!userNameError.isEmpty()) {
@@ -65,27 +66,25 @@ public class SetupAccountPage {
             }
             
             try {
-            	// Check if the user already exists
-            	if(!databaseHelper.doesUserExist(userName)) {
-            		
-            		// Validate the invitation code
-            		if(databaseHelper.validateInvitationCode(code)) {
-            			
-            			// Create a new user and register them in the database
-		            	User user=new User(userName, password, "user");
-		                databaseHelper.register(user);
-		                
-		             // Navigate to the Welcome Login Page
-		                new WelcomeLoginPage(databaseHelper).show(primaryStage,user);
-            		}
-            		else {
-            			errorLabel.setText("Please enter a valid invitation code");
-            		}
-            	}
-            	else {
-            		errorLabel.setText("This useruserName is taken!!.. Please use another to setup an account");
-            	}
             	
+            	 String role = databaseHelper.validateInvitationCode(invitationCode);
+                 
+                 if (role == null) {
+                     errorLabel.setText("Invalid or expired invitation code");
+                     return;
+                 }
+                 
+                // Check if the user already exists
+                if(!databaseHelper.doesUserExist(userName)) {
+                    // Create a new user and register them in the database
+                	User user = new User(userName, password, role);
+                    databaseHelper.register(user);
+
+                    // Navigate to the Welcome Login Page
+                    new WelcomeLoginPage(databaseHelper).show(primaryStage, user);
+                } else {
+                    errorLabel.setText("This username is taken!! Please use another to setup an account");
+                }
             } catch (SQLException e) {
                 System.err.println("Database error: " + e.getMessage());
                 e.printStackTrace();
@@ -94,7 +93,7 @@ public class SetupAccountPage {
 
         VBox layout = new VBox(10);
         layout.setStyle("-fx-padding: 20; -fx-alignment: center;");
-        layout.getChildren().addAll(userNameField, passwordField,inviteCodeField, setupButton, errorLabel);
+        layout.getChildren().addAll(userNameField, passwordField, invitationCodeField, setupButton, errorLabel);
 
         primaryStage.setScene(new Scene(layout, 800, 400));
         primaryStage.setTitle("Account Setup");
